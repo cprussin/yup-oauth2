@@ -7,6 +7,7 @@ use crate::error::Error;
 use crate::types::{ApplicationSecret, TokenInfo};
 
 use futures::lock::Mutex;
+use std::borrow::Cow;
 use std::convert::AsRef;
 use std::error::Error as StdError;
 use std::net::SocketAddr;
@@ -34,6 +35,7 @@ fn build_authentication_request_url<T>(
     scopes: &[T],
     redirect_uri: Option<&str>,
     force_account_selection: bool,
+    login_hint: Option<&str>,
 ) -> String
 where
     T: AsRef<str>,
@@ -59,6 +61,9 @@ where
         "&response_type=code".to_string(),
         format!("&client_id={}", client_id),
     ];
+    if let Some(login_hint) = login_hint {
+        params.push(format!("&login_hint={}", login_hint))
+    }
     if force_account_selection {
         params.push("&prompt=select_account+consent".to_string());
     }
@@ -91,6 +96,7 @@ pub struct InstalledFlow {
     pub(crate) method: InstalledFlowReturnMethod,
     pub(crate) flow_delegate: Box<dyn InstalledFlowDelegate>,
     pub(crate) force_account_selection: bool,
+    pub(crate) login_hint: Option<Cow<'static, str>>,
 }
 
 impl InstalledFlow {
@@ -113,6 +119,7 @@ impl InstalledFlow {
             method,
             flow_delegate: Box::new(DefaultInstalledFlowDelegate),
             force_account_selection: false,
+            login_hint: None,
         }
     }
 
@@ -169,6 +176,7 @@ impl InstalledFlow {
             scopes,
             self.flow_delegate.redirect_uri(),
             self.force_account_selection,
+            self.login_hint.as_deref(),
         );
         log::debug!("Presenting auth url to user: {}", url);
         let auth_code = self
@@ -212,6 +220,7 @@ impl InstalledFlow {
             scopes,
             Some(redirect_uri.as_ref()),
             self.force_account_selection,
+            self.login_hint.as_deref(),
         );
         log::debug!("Presenting auth url to user: {}", url);
         let _ = self
@@ -423,7 +432,8 @@ mod tests {
                  rf.apps.googleusercontent.com",
                 &["email", "profile"],
                 None,
-                false
+                false,
+                None
             )
         );
     }
@@ -441,7 +451,8 @@ mod tests {
                  rf.apps.googleusercontent.com",
                 &["email", "profile"],
                 None,
-                false
+                false,
+                None
             )
         );
     }

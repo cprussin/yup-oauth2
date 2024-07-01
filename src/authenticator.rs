@@ -726,6 +726,17 @@ impl<C> AuthenticatorBuilder<C, InstalledFlow> {
         }
     }
 
+    /// Set the login_hint parameter
+    pub fn login_hint(self, url: impl Into<Cow<'static, str>>) -> Self {
+        AuthenticatorBuilder {
+            auth_flow: InstalledFlow {
+                login_hint: Some(url.into()),
+                ..self.auth_flow
+            },
+            ..self
+        }
+    }
+
     /// Create the authenticator.
     pub async fn build(self) -> io::Result<Authenticator<C::Connector>>
     where
